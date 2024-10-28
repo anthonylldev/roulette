@@ -387,6 +387,113 @@ function reverse_labouchere_game() {
       fi
       ;;
     2)
+      for element in "${red_numbers[@]}"; do
+        if [ ${element} -eq ${random_number} ]; then
+          is_red=true
+        fi
+      done
+
+      for element in "${black_numbers[@]}"; do
+        if [ ${element} -eq ${random_number} ]; then
+          is_black=true
+        fi
+      done
+
+      number_report "${verbose}" "${mode}" "${is_red}" "${is_black}"
+
+      if [ "${is_red}" ] && [ "${red_black}" == "red" ]; then
+        if [ "${verbose}" ]; then
+          echo -e "${yellowColour}[+]${endColour} ${greenColour}You win.${endColour}"
+        fi
+
+        # If we win we double the auxiliary bet and initialise the reward.
+        reward=$(("${bet}" * 2))
+
+        # We add the reward to the current money.
+        money=$(("${money}" + "${reward}"))
+
+        # shellcheck disable=SC2206
+        sequence+=($bet)
+
+        # shellcheck disable=SC2206
+        sequence=(${sequence[@]})
+
+        if [ "${#sequence[@]}" -ne 1 ]; then
+          # shellcheck disable=SC2004
+          bet=$((${sequence[0]} + ${sequence[-1]}))
+        elif [ "${#sequence[@]}" -eq 1 ]; then
+          bet=${sequence[0]}
+          else
+          echo "zero"
+        fi
+
+        if [ "${verbose}" ]; then
+        # shellcheck disable=SC2145
+          echo -e "${yellowColour}[+]${endColour} ${grayColour}Sequence${endColour} ${purpleColour}[${sequence[@]}]${endColour}"
+        fi
+      elif [ "${is_black}" ] && [ "${red_black}" == "black" ]; then
+        if [ "${verbose}" ]; then
+          echo -e "${yellowColour}[+]${endColour} ${greenColour}You win.${endColour}"
+        fi
+
+        # If we win we double the auxiliary bet and initialise the reward.
+        reward=$(("${bet}" * 2))
+
+        # We add the reward to the current money.
+        money=$(("${money}" + "${reward}"))
+
+        # shellcheck disable=SC2206
+        sequence+=($bet)
+
+        # shellcheck disable=SC2206
+        sequence=(${sequence[@]})
+
+        if [ "${#sequence[@]}" -ne 1 ]; then
+          # shellcheck disable=SC2004
+          bet=$((${sequence[0]} + ${sequence[-1]}))
+        elif [ "${#sequence[@]}" -eq 1 ]; then
+          bet=${sequence[0]}
+          else
+          echo "zero"
+        fi
+
+        if [ "${verbose}" ]; then
+        # shellcheck disable=SC2145
+          echo -e "${yellowColour}[+]${endColour} ${grayColour}Sequence${endColour} ${purpleColour}[${sequence[@]}]${endColour}"
+        fi
+      else
+        if [ "${verbose}" ]; then
+          echo -e "${yellowColour}[+]${endColour} ${redColour}You lost.${endColour}"
+        fi
+
+        # shellcheck disable=SC2184
+        unset sequence[0]
+
+        # shellcheck disable=SC2184
+        unset sequence[-1] 2>/dev/null
+
+        # shellcheck disable=SC2206
+        sequence=(${sequence[@]})
+
+        if [ "${verbose}" ]; then
+        # shellcheck disable=SC2145
+          echo -e "${yellowColour}[+]${endColour} ${grayColour}Sequence${endColour} ${purpleColour}[${sequence[@]}]${endColour}"
+        fi
+
+        if [ "${#sequence[@]}" -ne 1 ] && [ "${#sequence[@]}" -ne 0 ]; then
+          # shellcheck disable=SC2004
+          bet=$((${sequence[0]} + ${sequence[-1]}))
+        elif [ "${#sequence[@]}" -eq 1 ]; then
+          bet=${sequence[0]}
+        else
+          if [ "${verbose}" ]; then
+              # shellcheck disable=SC2145
+            echo -e "${yellowColour}[+]${endColour} ${grayColour}Reset sequence.${endColour}"
+          fi
+
+          sequence=(1 2 3 4)
+        fi
+      fi
       ;;
     esac
 
