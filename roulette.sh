@@ -36,8 +36,27 @@ function show_technique_message() {
   echo -e "\t${turquoiseColour}2${endColour} ${grayColour}- Reverse Labouchère${endColour}\n"
 }
 
+function report() {
+  initial_money=$1
+  money=$2
+  total_games=$3
+
+  if [ "${money}" -lt "${initial_money}" ]; then
+    echo -e "\n${yellowColour}[+]${endColour} ${grayColour}Final money: ${endColour}${redColour}${money}€${endColour}"
+  elif [ "${money}" -eq "${initial_money}" ]; then
+    echo -e "\n${yellowColour}[+]${endColour} ${grayColour}Final money: ${endColour}${turquoiseColour}${money}€${endColour}"
+  else
+    echo -e "\n${yellowColour}[+]${endColour} ${grayColour}Final money: ${endColour}${greenColour}${money}€${endColour}"
+  fi
+
+  echo -e "\n${yellowColour}[+]${endColour} ${grayColour}Total games: ${endColour}${turquoiseColour}${total_games}${endColour}\n"
+}
+
 function martingale_game() {
   money=$1
+  initial_money=$1
+  verbose=$2
+  var total_games=1
   echo -e "\n${purpleColour}MARTINGALE${endColour}"
   echo -e "\n${yellowColour}[+]${endColour} ${grayColour}Initial money: ${endColour}${turquoiseColour}${money}€${endColour}\n"
   echo -ne "${yellowColour}[+]${endColour} ${grayColour}How much money do you want to bet?  ->  ${endColour}" && read initial_bet
@@ -52,7 +71,9 @@ function martingale_game() {
   # Initialise the auxiliary variable of the bet.
   aux_bet=${initial_bet}
 
-  echo -e "\n${yellowColour}[+]${endColour} ${grayColour}Betting${endColour} ${turquoiseColour}${initial_bet}€${endColour} ${grayColour}on${endColour} ${turquoiseColour}${even_odd}${endColour}${grayColour}.${endColour}"
+  if [ "${verbose}" ]; then
+    echo -e "\n${yellowColour}[+]${endColour} ${grayColour}Betting${endColour} ${turquoiseColour}${initial_bet}€${endColour} ${grayColour}on${endColour} ${turquoiseColour}${even_odd}${endColour}${grayColour}.${endColour}"
+  fi
 
   tput civis
 
@@ -61,7 +82,9 @@ function martingale_game() {
 
     # We check that the money we bet is not more than our current money.
     if [ "${aux_bet}" -gt "${money}" ]; then
-      echo -e "\n${redColour}[!] You can't bet more money than you have.${endColour}\n"
+      echo -e "\n${redColour}[!] The next bet is greater than the money you have remaining.${endColour}"
+      report "${initial_money}" "${money}" "${total_games}"
+      tput cnorm
       exit 1
     fi
 
@@ -70,8 +93,11 @@ function martingale_game() {
 
     # We get the roulette number.
     random_number=$(($RANDOM % 37))
+    ((total_games+=1))
 
+  if [ "${verbose}" ]; then
     echo -e "\n${yellowColour}[+]${endColour} ${grayColour}The number is:${endColour} ${yellowColour}${random_number}${endColour}${grayColour}${endColour}"
+  fi
 
     # We check whether it is odd-even or zero.
     if [ ${random_number} -eq 0 ]; then
@@ -84,7 +110,9 @@ function martingale_game() {
 
 
     if [ "${aux}" == "${even_odd}" ]; then
-      echo -e "${yellowColour}[+]${endColour} ${greenColour}You win.${endColour}"
+      if [ "${verbose}" ]; then
+        echo -e "${yellowColour}[+]${endColour} ${greenColour}You win.${endColour}"
+      fi
 
       # If we win we double the auxiliary bet and initialise the reward.
       reward=$(("${aux_bet}" * 2))
@@ -98,15 +126,19 @@ function martingale_game() {
 
       # If we lose, we double the auxiliary bet.
       aux_bet=$(("${aux_bet}" * 2))
-      echo -e "${yellowColour}[+]${endColour} ${redColour}You lost.${endColour}"
+      if [ "${verbose}" ]; then
+        echo -e "${yellowColour}[+]${endColour} ${redColour}You lost.${endColour}"
+      fi
     fi
 
-    echo -e "${yellowColour}[+]${endColour} ${grayColour}Actual money: ${endColour} ${yellowColour}${money}${endColour}"
-    echo -e "${yellowColour}[+]${endColour} ${grayColour}Next bet: ${endColour} ${yellowColour}${aux_bet}${endColour}"
-    sleep 2
+    if [ "${verbose}" ]; then
+      echo -e "${yellowColour}[+]${endColour} ${grayColour}Actual money: ${endColour} ${yellowColour}${money}${endColour}"
+      echo -e "${yellowColour}[+]${endColour} ${grayColour}Next bet: ${endColour} ${yellowColour}${aux_bet}${endColour}"
+    fi
   done
 
-  echo -e "\n${redColour}You lost all money.${endColour}\n"
+  echo -e "\n${redColour}You lost all money.${endColour}"
+  report "${initial_money}" "${money}" "${total_games}"
   tput cnorm
 }
 
@@ -117,6 +149,7 @@ function reverse_labouchere_game() {
 function validate() {
   money=$1
   technique=$2
+  verbose=$3
 
   if ! [[ "${money}" =~ ^[0-9]+$ ]]; then
     echo -e "\n${redColour}[!] Money must be a number${endColour}\n"
@@ -125,10 +158,10 @@ function validate() {
 
   case ${technique} in
   1)
-    martingale_game "${money}"
+    martingale_game "${money}" "${verbose}"
     ;;
   2)
-    reverse_labouchere_game "${money}"
+    reverse_labouchere_game "${money}" "${verbose}"
     ;;
   *)
     show_technique_message
@@ -143,10 +176,14 @@ declare -i parameter_counter=0
 # Execution
 trap ctrl_c INT
 
-while getopts "m:t:h" arg 2>/dev/null; do
+while getopts "m:t:hv" arg 2>/dev/null; do
   case $arg in
   h)
     ;;
+  v)
+    parameter_counter=1
+    verbose=true
+  ;;
   m)
     parameter_counter=1
     money=$OPTARG
@@ -173,7 +210,7 @@ if [ ${parameter_counter} -eq 1 ]; then
   fi
 
   if [ "${money}" ] && [ "${technique}" ]; then
-     validate "${money}" "${technique}"
+     validate "${money}" "${technique}" "${verbose}"
   else
     exit 1
   fi
