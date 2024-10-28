@@ -254,6 +254,152 @@ function martingale_game() {
 
 function reverse_labouchere_game() {
   money=$1
+  initial_money=$1
+  verbose=$2
+  mode=$3
+  total_games=0
+  echo -e "\n${purpleColour}MARTINGALE${endColour}"
+  echo -e "\n${yellowColour}[+]${endColour} ${grayColour}Initial money: ${endColour}${turquoiseColour}${money}€${endColour}"
+
+  case ${mode} in
+  1)
+    echo -ne "\n${yellowColour}[+]${endColour} ${grayColour}What do you want to bet on continuously even/odd?  ->  ${endColour}" && read even_odd
+    if [ "${even_odd}" != "even" ]  && [ "${even_odd}" != "odd" ]; then
+        echo -e "\n${redColour}[!] You must enter even or odd.${endColour}\n"
+        exit 1
+    fi
+    ;;
+  2)
+    echo -ne "\n${yellowColour}[+]${endColour} ${grayColour}What do you want to bet on continuously red/black?  ->  ${endColour}" && read red_black
+    if [ "${red_black}" != "red" ]  && [ "${red_black}" != "black" ]; then
+        echo -e "\n${redColour}[!] You must enter black or red.${endColour}\n"
+        exit 1
+    fi
+    ;;
+  *)
+    show_mode_message
+    exit 1
+    ;;
+  esac
+
+  declare -a sequence=(1 2 3 4)
+
+  # shellcheck disable=SC2145
+  echo -e "\n${yellowColour}[+]${endColour} ${grayColour}Start with sequence${endColour} ${purpleColour}[${sequence[@]}]${endColour}"
+
+  bet=$((${sequence[0]} + ${sequence[-1]}))
+
+  tput civis
+
+  # As long as money is not less than or equal to 0.
+  while [ ! "${money}" -le 0 ]; do
+
+    # We check that the money we bet is not more than our current money.
+    if [ "${bet}" -gt "${money}" ]; then
+      echo -e "\n${redColour}[!] The next bet is greater than the money you have remaining.${endColour}"
+      report "${initial_money}" "${money}" "${total_games}"
+      tput cnorm
+      exit 1
+    fi
+
+    # We subtract the stake money from our money.
+    money=$(("${money}" - "${bet}"))
+
+    # We get the roulette number.
+    random_number=$(($RANDOM % 37))
+    ((total_games+=1))
+
+    number_report "${verbose}" "${mode}"
+
+    case ${mode} in
+    1)
+      # We check whether it is odd-even or zero.
+      if [ ${random_number} -eq 0 ]; then
+        aux="zero"
+      elif [ $(("${random_number}" % 2)) -eq 0 ]; then
+        aux="even"
+      else
+        aux="odd"
+      fi
+
+      if [ "${aux}" == "${even_odd}" ]; then
+        if [ "${verbose}" ]; then
+          echo -e "${yellowColour}[+]${endColour} ${greenColour}You win.${endColour}"
+        fi
+
+        # If we win we double the auxiliary bet and initialise the reward.
+        reward=$(("${bet}" * 2))
+
+        # We add the reward to the current money.
+        money=$(("${money}" + "${reward}"))
+
+        # shellcheck disable=SC2206
+        sequence+=($bet)
+
+        # shellcheck disable=SC2206
+        sequence=(${sequence[@]})
+
+        if [ "${#sequence[@]}" -ne 1 ]; then
+          # shellcheck disable=SC2004
+          bet=$((${sequence[0]} + ${sequence[-1]}))
+        elif [ "${#sequence[@]}" -eq 1 ]; then
+          bet=${sequence[0]}
+          else
+          echo "zero"
+        fi
+
+        if [ "${verbose}" ]; then
+        # shellcheck disable=SC2145
+          echo -e "${yellowColour}[+]${endColour} ${grayColour}Sequence${endColour} ${purpleColour}[${sequence[@]}]${endColour}"
+        fi
+      else
+        if [ "${verbose}" ]; then
+          echo -e "${yellowColour}[+]${endColour} ${redColour}You lost.${endColour}"
+        fi
+
+        # shellcheck disable=SC2184
+        unset sequence[0]
+
+        # shellcheck disable=SC2184
+        unset sequence[-1] 2>/dev/null
+
+        # shellcheck disable=SC2206
+        sequence=(${sequence[@]})
+
+        if [ "${verbose}" ]; then
+        # shellcheck disable=SC2145
+          echo -e "${yellowColour}[+]${endColour} ${grayColour}Sequence${endColour} ${purpleColour}[${sequence[@]}]${endColour}"
+        fi
+
+        if [ "${#sequence[@]}" -ne 1 ] && [ "${#sequence[@]}" -ne 0 ]; then
+          # shellcheck disable=SC2004
+          bet=$((${sequence[0]} + ${sequence[-1]}))
+        elif [ "${#sequence[@]}" -eq 1 ]; then
+          bet=${sequence[0]}
+        else
+          if [ "${verbose}" ]; then
+              # shellcheck disable=SC2145
+            echo -e "${yellowColour}[+]${endColour} ${grayColour}Reset sequence.${endColour}"
+          fi
+
+          sequence=(1 2 3 4)
+        fi
+      fi
+      ;;
+    2)
+      ;;
+    esac
+
+    if [ "${verbose}" ]; then
+      echo -e "${yellowColour}[+]${endColour} ${grayColour}Actual money: ${endColour} ${yellowColour}${money}${endColour}"
+      echo -e "${yellowColour}[+]${endColour} ${grayColour}Next bet: ${endColour} ${yellowColour}${bet}${endColour}"
+    fi
+
+  done
+
+  echo -e "\n${redColour}You lost all money.${endColour}"
+  report "${initial_money}" "${money}" "${total_games}"
+  tput cnorm
 }
 
 function validate() {
